@@ -47,7 +47,13 @@ def factor():
     else:
         return float(m.group(1))
 
-def handler(method, path, args):
+def set_config(new_config):
+    global config
+    if not validate_config(new_config):
+        raise ValueError()
+    config = new_config
+
+def handler(method, path, args, body):
     global run_pump_until, run_pump_for, config
     if method == 'GET':
         if path == '/status.json':
@@ -74,7 +80,14 @@ def handler(method, path, args):
             return("200 OK", "text/json", json.dumps(config))
     elif method == 'PUT':
         if path == '/config.json':
-            pass # TODO FIXME
+            try:
+                new_config = json.loads(body.decode("utf-8"))
+                if not validate_config(new_config):
+                    raise ValueError()
+                set_config(new_config)
+                return("200 OK", "text/json", json.dumps(config))
+            except:
+                return("400 Bad Request", "text/html", "<h1>Bad Request</h1>Invalid config")
     elif method == 'POST':
         if path == '/ntp':
             ntptime.settime()
@@ -109,10 +122,29 @@ class HttpServer:
 
                 try:
                     try:
-                        parts = conn.recv(1024)
+                        parts = conn.readline()
                         print("received %d bytes" % len(parts))
-                    except:
+                    except OSError:
                         parts = bytes()
+
+                    content_length = None
+                    try:
+                        while True:
+                            header = conn.readline().decode("utf-8").strip()
+                            if header == "":
+                                break
+                            print("parsing header '%s'" % header)
+                            [key, value] = header.split(": ")
+                            if key == "Content-Length":
+                                content_length = int(value)
+                    except OSError:
+                        pass
+
+                    if content_length is not None:
+                        body = conn.read(content_length)
+                    else:
+                        body = None
+
                     parts = parts.decode("utf-8").split()
                     print("decoded %s segments" % len(parts))
                     if len(parts) == 0:
@@ -131,15 +163,16 @@ class HttpServer:
                                 else:
                                     args[arg_val[0]] = arg_val[1]
                         try:
-                            print("Got %s for %s with args %s" % (method, path, args))
-                            status, content_type, content = self.handler(method, path, args)
+                            print("Got %s for %s with args %s and body %s" % (method, path, args, body))
+                            status, content_type, content = self.handler(method, path, args, body)
                         except Exception as e:
                             status = "500 Internal Server Error"
                             content_type = "text/html"
                             content = "<h1>Error 500: Internal Server Error</h1><p>The handler function raised an exception:</p><pre>%s</pre>" % e
                             sys.print_exception(e)
-                except:
+                except Exception as e:
                     status, content_type, content = "400 Bad Request", "text/html", "<h1>Bad Request</h1>"
+                    sys.print_exception(e)
 
                 print("Replying with %s, %s, %s" % (status, content_type, content))
                 conn.send('HTTP/1.1 %s\n' % status)
