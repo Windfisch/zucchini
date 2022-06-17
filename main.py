@@ -11,19 +11,9 @@ import sys
 import os
 import math
 
-gc.enable()
+run_pump_until = 0
+run_pump_for = 0
 
-wifi_ssid = 'YOUR WIFI SSID'
-wifi_key = 'YOUR WIFI KEY'
-elevation_meters = 279
-location = "49.5529,11.0191559"
-base_eto_mm = 6
-
-elevation_foot = 3.28084 * elevation_meters
-base_eto_inch = 6 / 25.4
-
-wlan = network.WLAN()
-wlan.connect(wifi_ssid, wifi_key)
 
 def http_get(url):
     import socket
@@ -43,6 +33,10 @@ def http_get(url):
     return response.decode('utf-8')
 
 def factor():
+    global config
+    location = "%s,%s" % (config["latitude"], config["longitude"])
+    base_eto_inch = config["reference_evaporation"] / 25.4
+    elevation_foot = config["elevation"] * 3.28084
     url = "http://weather.opensprinkler.com/weather3.py?loc=" + location + "&key=&wto=%22baseETo%22:" + str(base_eto_inch) + ",%22elevation%22:" + str(elevation_foot)
     print(url)
     response = http_get(url)
@@ -54,7 +48,7 @@ def factor():
         return float(m.group(1))
 
 def handler(method, path, args):
-    global run_pump_until, run_pump_for
+    global run_pump_until, run_pump_for, config
     if method == 'GET':
         if path == '/status.json':
             return ("200 OK", "text/json", json.dumps({
@@ -76,6 +70,11 @@ def handler(method, path, args):
                 for line in f:
                     result += line + "\n"
             return("200 OK", "text/csv", result)
+        elif path == "/config.json":
+            return("200 OK", "text/json", json.dumps(config))
+    elif method == 'PUT':
+        if path == '/config.json':
+            pass # TODO FIXME
     elif method == 'POST':
         if path == '/ntp':
             ntptime.settime()
@@ -153,18 +152,6 @@ class HttpServer:
                 return activity
         return activity
             
-h = HttpServer(handler)
-
-ntptime.settime()
-
-run_pump_until = 0
-run_pump_for = 0
-
-relais_pin = machine.Pin(2) # actually, its 0
-
-relais_pin.init(relais_pin.OUT)
-relais_pin.off()
-
 def write_log(filename, text):
     MAX_SIZE = 8 * 1024
 
@@ -176,15 +163,36 @@ def write_log(filename, text):
     if size > MAX_SIZE:
         os.rename("%s.new" % filename, "%s.old" % filename)
 
-day_length = 24 * 3600
-start_time_in_day = 19*3600 + 57 * 60 + 30
-next_start_time = math.ceil((time.time() - start_time_in_day) / day_length) * day_length + start_time_in_day
+def validate_config(config):
+    try:
+        config["day_length"] = 24 * 3600 if "day_length" not in config else int(config["day_length"])
+        config["start_time_in_day"] = int(config["start_time_in_day"])
+        config["irrigation_duration"] = int(config["irrigation_duration"])
+        config["reference_evaporation"] = float(config["reference_evaporation"])
+        config["longitude"] = float(config["longitude"])
+        config["latitude"] = float(config["latitude"])
+        config["elevation"] = float(config["elevation"])
+        return config
+    except:
+        return None
+
+def default_config():
+    return {
+        "day_length": 30, # 3600*24,
+        "start_time_in_day": 10, # 8 * 3600, # 10am CEST
+        "irrigation_duration": 5,
+        "reference_evaporation": 6,
+        "latitude": 49.5529,
+        "longitude": 11.0191559,
+        "elevation": 279
+    }
+
 
 def intceil(a,b):
     return (a+b-1)//b
 
 def run():
-    global run_pump_until, run_pump_for, day_length, start_time_in_day, next_start_time
+    global run_pump_until, run_pump_for, next_start_time
     performance_until = 0
 
     while True:
@@ -210,16 +218,35 @@ def run():
             relais_pin.off()
 
         if time.time() >= next_start_time:
-            print("woop woop")
-            next_start_time = intceil((time.time() + 1 - start_time_in_day), day_length) * day_length + start_time_in_day
+            next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
             try:
                 curr_factor = factor()
-                run_pump_for = int(5 * curr_factor / 100)
+                run_pump_for = int(config["irrigation_duration"] * curr_factor / 100)
             except:
                 curr_factor = "FAIL"
                 run_pump_for = 5
             run_pump_until = time.time() + run_pump_for
             write_log("water", "%d,%d,%s,AUTO" % (time.time(), run_pump_for, curr_factor))
+
+gc.enable()
+
+wifi_ssid = 'YOUR WIFI SSID'
+wifi_key = 'YOUR WIFI KEY'
+
+wlan = network.WLAN()
+wlan.connect(wifi_ssid, wifi_key)
+
+config = default_config()
+next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
+
+h = HttpServer(handler)
+
+ntptime.settime()
+
+relais_pin = machine.Pin(2) # actually, its 0
+
+relais_pin.init(relais_pin.OUT)
+relais_pin.off()
 
 
 run()
