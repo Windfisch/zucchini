@@ -7,6 +7,8 @@ import esp
 import socket
 import time
 import ntptime
+import sys
+import os
 
 gc.enable()
 
@@ -51,6 +53,7 @@ def factor():
         return float(m.group(1))
 
 def handler(method, path, args):
+    global run_pump_until, run_pump_for
     if method == 'GET':
         if path == '/status.json':
             return ("200 OK", "text/json", json.dumps({
@@ -59,10 +62,32 @@ def handler(method, path, args):
                 "time": time.time(),
                 "ntp_server": ntptime.host
             }))
+        elif path == '/log.csv':
+            result = ""
+            try:
+                with open("water.old", "r") as f:
+                    for line in f:
+                        result += line + "\n"
+            except:
+                pass
+            with open("water.new", "r") as f:
+                for line in f:
+                    result += line + "\n"
+            return("200 OK", "text/csv", result)
     elif method == 'POST':
         if path == '/ntp':
             ntptime.settime()
             return("200 OK", "text/json", json.dumps({"time": time.time()}))
+        if path == '/water':
+            try:
+                seconds = int(args['seconds'])
+            except:
+                return("400 Bad Request", "text/html", "<h1>Bad Request</h1>Missing or invalid <tt>?seconds=&lt;num&gt;</tt> parameter")
+            run_pump_for = seconds
+            run_pump_until = time.time() + run_pump_for
+            write_log("water", "%d,%d,0,MANUAL" % (time.time(), seconds))
+            return("200 OK", "text/json", json.dumps({"time": time.time(), "end_time": run_pump_until}))
+
 
     return ("404 Not Found", "text/html", "<h1>Not found</h1")
 
@@ -107,10 +132,11 @@ class HttpServer:
                         try:
                             print("Got %s for %s with args %s" % (method, path, args))
                             status, content_type, content = self.handler(method, path, args)
-                        except:
+                        except Exception as e:
                             status = "500 Internal Server Error"
                             content_type = "text/html"
-                            content = "<h1>Error 500: Internal Server Error</h1>The handler function raised an exception"
+                            content = "<h1>Error 500: Internal Server Error</h1><p>The handler function raised an exception:</p><pre>%s</pre>" % e
+                            sys.print_exception(e)
                 except:
                     status, content_type, content = "400 Bad Request", "text/html", "<h1>Bad Request</h1>"
 
@@ -135,6 +161,17 @@ relais_pin = machine.Pin(2) # actually, its 0
 relais_pin.init(relais_pin.OUT)
 relais_pin.off()
 
+def write_log(filename, text):
+    MAX_SIZE = 8 * 1024
+
+    f = open("%s.new" % filename, 'a')
+    print(text, file = f)
+    f.close()
+
+    size = os.stat("%s.new" % filename)[6]
+    if size > MAX_SIZE:
+        os.rename("%s.new" % filename, "%s.old" % filename)
+
 def run():
     global run_pump_until, run_pump_for
     performance_until = 0
@@ -152,7 +189,7 @@ def run():
             machine.lightsleep(500)
 
 
-        if time.time() + run_pump_for > run_pump_until:
+        if time.time() + run_pump_for < run_pump_until:
             run_pump_until = time.time() + run_pump_for
 
         if time.time() < run_pump_until:
