@@ -9,6 +9,7 @@ import time
 import ntptime
 import sys
 import os
+import math
 
 gc.enable()
 
@@ -60,6 +61,7 @@ def handler(method, path, args):
                 "GC enabled" : gc.isenabled(),
                 "GC mem free" : gc.mem_free(),
                 "time": time.time(),
+                "next_start_time": next_start_time,
                 "ntp_server": ntptime.host
             }))
         elif path == '/log.csv':
@@ -153,6 +155,8 @@ class HttpServer:
             
 h = HttpServer(handler)
 
+ntptime.settime()
+
 run_pump_until = 0
 run_pump_for = 0
 
@@ -172,9 +176,17 @@ def write_log(filename, text):
     if size > MAX_SIZE:
         os.rename("%s.new" % filename, "%s.old" % filename)
 
+day_length = 24 * 3600
+start_time_in_day = 19*3600 + 57 * 60 + 30
+next_start_time = math.ceil((time.time() - start_time_in_day) / day_length) * day_length + start_time_in_day
+
+def intceil(a,b):
+    return (a+b-1)//b
+
 def run():
-    global run_pump_until, run_pump_for
+    global run_pump_until, run_pump_for, day_length, start_time_in_day, next_start_time
     performance_until = 0
+
     while True:
         if h.poll() or performance_until > time.time() + 120:
             performance_until = time.time() + 120
@@ -196,6 +208,18 @@ def run():
             relais_pin.on()
         else:
             relais_pin.off()
+
+        if time.time() >= next_start_time:
+            print("woop woop")
+            next_start_time = intceil((time.time() + 1 - start_time_in_day), day_length) * day_length + start_time_in_day
+            try:
+                curr_factor = factor()
+                run_pump_for = int(5 * curr_factor / 100)
+            except:
+                curr_factor = "FAIL"
+                run_pump_for = 5
+            run_pump_until = time.time() + run_pump_for
+            write_log("water", "%d,%d,%s,AUTO" % (time.time(), run_pump_for, curr_factor))
 
 
 run()
