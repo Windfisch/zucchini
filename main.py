@@ -14,6 +14,9 @@ import math
 run_pump_until = 0
 run_pump_for = 0
 
+relais_pin = machine.Pin(0)
+relais_pin.init(relais_pin.OUT)
+relais_pin.on()
 
 def http_get(url):
     import socket
@@ -48,10 +51,15 @@ def factor():
         return float(m.group(1))
 
 def set_config(new_config):
-    global config
+    global config, next_start_time
     if not validate_config(new_config):
         raise ValueError()
     config = new_config
+
+    with open("config.json", "w") as file:
+        json.dump(config, file)
+
+    next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
 
 def handler(method, path, args, body):
     global run_pump_until, run_pump_for, config
@@ -211,8 +219,8 @@ def validate_config(config):
 
 def default_config():
     return {
-        "day_length": 30, # 3600*24,
-        "start_time_in_day": 10, # 8 * 3600, # 10am CEST
+        "day_length": 3600*24,
+        "start_time_in_day": 8 * 3600, # 10am CEST
         "irrigation_duration": 5,
         "reference_evaporation": 6,
         "latitude": 49.5529,
@@ -269,17 +277,15 @@ wifi_key = 'YOUR WIFI KEY'
 wlan = network.WLAN()
 wlan.connect(wifi_ssid, wifi_key)
 
-config = default_config()
+try:
+    config = json.load(open("config.json", "r"))
+    if not validate_config(config):
+        config = default_config()
+except:
+    config = default_config()
+
+ntptime.settime()
 next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
 
 h = HttpServer(handler)
-
-ntptime.settime()
-
-relais_pin = machine.Pin(2) # actually, its 0
-
-relais_pin.init(relais_pin.OUT)
-relais_pin.off()
-
-
 run()
