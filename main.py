@@ -14,9 +14,15 @@ import math
 run_pump_until = 0
 run_pump_for = 0
 
+wdt = None
+
 relais_pin = machine.Pin(0)
 relais_pin.init(relais_pin.OUT)
 relais_pin.on()
+
+led_pin = machine.Pin(2)
+led_pin.init(led_pin.OUT)
+led_pin.off()
 
 def http_get(url):
     import socket
@@ -62,7 +68,7 @@ def set_config(new_config):
     next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
 
 def handler(method, path, args, body):
-    global run_pump_until, run_pump_for, config
+    global run_pump_until, run_pump_for, config, wdt
     if method == 'GET':
         if path == '/status.json':
             return ("200 OK", "text/json", json.dumps({
@@ -70,7 +76,8 @@ def handler(method, path, args, body):
                 "GC mem free" : gc.mem_free(),
                 "time": time.time(),
                 "next_start_time": next_start_time,
-                "ntp_server": ntptime.host
+                "ntp_server": ntptime.host,
+                "watchdog_running": wdt is not None
             }))
         elif path == '/log.csv':
             result = ""
@@ -233,10 +240,16 @@ def intceil(a,b):
     return (a+b-1)//b
 
 def run():
-    global run_pump_until, run_pump_for, next_start_time
+    global run_pump_until, run_pump_for, next_start_time, relais_pin, wdt, led_pin
     performance_until = 0
 
+    wdt_start = time.time() + 60
+
     while True:
+        if wdt is None and time.time() > wdt_start:
+            led_pin.on()
+            wdt = machine.WDT()
+
         if h.poll() or performance_until > time.time() + 120:
             performance_until = time.time() + 120
             print("setting performance_until to %d" % performance_until)
@@ -253,10 +266,13 @@ def run():
         if time.time() + run_pump_for < run_pump_until:
             run_pump_until = time.time() + run_pump_for
 
-        if time.time() < run_pump_until:
-            relais_pin.on()
-        else:
-            relais_pin.off()
+        if wdt is not None:
+            if time.time() < run_pump_until:
+                relais_pin.off() # turn the relais ON
+            else:
+                relais_pin.on() # relais OFF
+
+            wdt.feed()
 
         if time.time() >= next_start_time:
             next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
