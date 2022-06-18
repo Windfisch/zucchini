@@ -287,8 +287,13 @@ def run():
 
 gc.enable()
 
+esp.sleep_type(esp.SLEEP_LIGHT)
+
 wifi_ssid = 'YOUR WIFI SSID'
 wifi_key = 'YOUR WIFI KEY'
+
+ap = network.WLAN(network.AP_IF)
+ap.active(False)
 
 wlan = network.WLAN()
 wlan.connect(wifi_ssid, wifi_key)
