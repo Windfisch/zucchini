@@ -6,7 +6,7 @@ It uses an ESP8266 module (the cheap ESP-01 module, to be exact) and a relay boa
 can be bought at your favourite chinese marketplace for less than three bucks.  Oh yea and it uses
 [micropython](https://micropython.org/).
 
-![Photo of the ESP8266 relay board](esp_relay.png)
+![Photo of the ESP8266 relay board](esp_relay.jpg)
 
 Together with a small water pump that is driven by the relay, and some hose which I drilled holes
 into, this makes for a really ~~feature-rich~~cheap irrigation solution.
