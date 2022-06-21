@@ -9,13 +9,14 @@ can be bought at your favourite chinese marketplace for less than three bucks.  
 ![Photo of the ESP8266 relay board](esp_relay.jpg)
 
 Together with a small water pump that is driven by the relay, and some hose which I drilled holes
-into, this makes for a really ~~feature-rich~~cheap irrigation solution.
+into, this makes for a really ~~feature-rich~~ dead cheap irrigation solution.
 
 It automatically adjusts irrigation time based on the estimated evaporation which depends on the
-weather.
+weather, and supports multiple irrigation events (e.g. in the morning and in the afternoon on hot
+days).
 
 Throw in a 5V linear regulator and a 12V/1A power supply to the mix and we're talking less than 20
-bucks in total.
+bucks in total. Yea and hot glue. Always use more hot glue.
 
 And the best is: Of course it's internet of things, and of course it speaks a REST-ish API!
 
@@ -105,3 +106,21 @@ the same number as `subtract` value on the second, e.g.:
 > AGPL, are you serious?!
 
 Dead serious. You can retrieve the source code via HTTP using the `/main.py` endpoint.
+
+---
+
+This is Zucchini, cost-effective™ smart home irrigation solution. Copyright (C)
+2022 Florian Jung
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License version 3 as published by
+the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+details.
+
+You should have received [a copy of the GNU Affero General Public
+License](LICENSE) along with this program.  If not, see
+<https://www.gnu.org/licenses/>.

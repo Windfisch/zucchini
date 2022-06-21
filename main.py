@@ -1,3 +1,5 @@
+# Zucchini -- A cost-effective™ smart home irrigation solution.
+
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License version 3 as published by
 # the Free Software Foundation at <https://www.gnu.org/licenses/agpl-3.0>.
