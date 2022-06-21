@@ -22,6 +22,7 @@ import math
 
 run_pump_until = 0
 run_pump_for = 0
+http_server = None
 
 wdt = None
 
@@ -249,7 +250,7 @@ def intceil(a,b):
     return (a+b-1)//b
 
 def run():
-    global run_pump_until, run_pump_for, next_start_time, relais_pin, wdt, led_pin
+    global run_pump_until, run_pump_for, next_start_time, relais_pin, wdt, led_pin, http_server
     performance_until = 0
 
     wdt_start = time.time() + 60
@@ -259,7 +260,7 @@ def run():
             led_pin.on()
             wdt = machine.WDT()
 
-        if h.poll() or performance_until > time.time() + 120:
+        if http_server.poll() or performance_until > time.time() + 120:
             performance_until = time.time() + 120
             print("setting performance_until to %d" % performance_until)
 
@@ -314,8 +315,23 @@ try:
 except:
     config = default_config()
 
-ntptime.settime()
+toggle = True
+while True:
+    try:
+        ntptime.settime()
+        break
+    except:
+        print("Setting time from NTP failed, retrying")
+        time.sleep(1)
+        toggle = not toggle
+        if toggle:
+            led_pin.on()
+        else:
+            led_pin.off()
+
+led_pin.off()
+
 next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
 
-h = HttpServer(handler)
+http_server = HttpServer(handler)
 run()
