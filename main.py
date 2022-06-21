@@ -108,6 +108,8 @@ def handler(method, path, args, body):
             return("200 OK", "text/csv", result)
         elif path == "/config.json":
             return("200 OK", "text/json", json.dumps(config))
+        elif path == "/factor":
+            return("200 OK", "text/html", "%s" % factor())
     elif method == 'PUT':
         if path == '/config.json':
             try:
