@@ -69,6 +69,7 @@ Upon rebooting, the device should connect to your WiFi and expose the following 
 
       "max": 999,               // Optional: Maxium irrigation duration for this event, wo which the
                                 // duration is clamped. Default: 10*duration
+    }
   ],
 
 
@@ -109,7 +110,7 @@ Dead serious. You can retrieve the source code via HTTP using the `/main.py` end
 
 ---
 
-This is Zucchini, cost-effective™ smart home irrigation solution. Copyright (C)
+This is Zucchini, a cost-effective™ smart home irrigation solution. Copyright (C)
 2022 Florian Jung
 
 This program is free software: you can redistribute it and/or modify it under
