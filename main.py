@@ -82,7 +82,7 @@ def set_config(new_config):
 
     update_next_start_time()
 
-def handler(method, path, args, body):
+def handler(method, path, args, body, conn):
     global run_pump_until, run_pump_for, config, wdt
     if method == 'GET':
         if path == '/status.json':
@@ -95,17 +95,27 @@ def handler(method, path, args, body):
                 "watchdog_running": wdt is not None
             }))
         elif path == '/log.csv':
-            result = ""
+            conn.send('HTTP/1.1 200 OK\n')
+            conn.send('Content-Type: text/plain\n')
+            conn.send('Connection: close\n\n')
             try:
                 with open("water.old", "r") as f:
                     for line in f:
-                        result += line + "\n"
+                        conn.sendall(line)
             except:
                 pass
             with open("water.new", "r") as f:
                 for line in f:
-                    result += line + "\n"
-            return("200 OK", "text/csv", result)
+                    conn.sendall(line)
+            return (None, None, None)
+        elif path == '/main.py':
+            conn.send('HTTP/1.1 200 OK\n')
+            conn.send('Content-Type: text/plain\n')
+            conn.send('Connection: close\n\n')
+            with open("main.py", "r") as f:
+                for line in f:
+                    conn.sendall(line)
+            return (None, None, None)
         elif path == "/config.json":
             return("200 OK", "text/json", json.dumps(config))
         elif path == "/factor":
@@ -196,7 +206,7 @@ class HttpServer:
                                     args[arg_val[0]] = arg_val[1]
                         try:
                             print("Got %s for %s with args %s and body %s" % (method, path, args, body))
-                            status, content_type, content = self.handler(method, path, args, body)
+                            status, content_type, content = self.handler(method, path, args, body, conn)
                         except Exception as e:
                             status = "500 Internal Server Error"
                             content_type = "text/html"
@@ -206,11 +216,14 @@ class HttpServer:
                     status, content_type, content = "400 Bad Request", "text/html", "<h1>Bad Request</h1>"
                     sys.print_exception(e)
 
-                print("Replying with %s, %s, %s" % (status, content_type, content))
-                conn.send('HTTP/1.1 %s\n' % status)
-                conn.send('Content-Type: %s\n' % content_type)
-                conn.send('Connection: close\n\n')
-                conn.sendall(content)
+                if status is not None:
+                    print("Replying with %s, %s, %s" % (status, content_type, content))
+                    conn.send('HTTP/1.1 %s\n' % status)
+                    conn.send('Content-Type: %s\n' % content_type)
+                    conn.send('Connection: close\n\n')
+                    conn.sendall(content)
+                else:
+                    print("Reply has been sent by handler")
                 conn.close()
                 activity = True
             except OSError:
