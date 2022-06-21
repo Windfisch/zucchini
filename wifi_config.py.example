@@ -1,0 +1,3 @@
+# Edit this file accordingly and rename it to "wifi_config.py". Then upload it together with main.py.
+wifi_ssid = 'YOUR WIFI SSID'
+wifi_key = 'YOUR WIFI KEY'

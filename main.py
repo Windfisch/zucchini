@@ -19,6 +19,7 @@ import ntptime
 import sys
 import os
 import math
+import wifi_config
 
 run_pump_until = 0
 run_pump_for = 0
@@ -335,14 +336,11 @@ gc.enable()
 
 esp.sleep_type(esp.SLEEP_LIGHT)
 
-wifi_ssid = 'YOUR WIFI SSID'
-wifi_key = 'YOUR WIFI KEY'
-
 ap = network.WLAN(network.AP_IF)
 ap.active(False)
 
 wlan = network.WLAN()
-wlan.connect(wifi_ssid, wifi_key)
+wlan.connect(wifi_config.wifi_ssid, wifi_config.wifi_key)
 
 try:
     config = json.load(open("config.json", "r"))
