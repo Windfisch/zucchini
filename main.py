@@ -23,6 +23,7 @@ import math
 run_pump_until = 0
 run_pump_for = 0
 http_server = None
+next_start_time = []
 
 wdt = None
 
@@ -66,8 +67,12 @@ def factor():
     else:
         return float(m.group(1))
 
-def set_config(new_config):
+def update_next_start_time():
     global config, next_start_time
+    next_start_time = [intceil((time.time() + 1 - event["start"]), config["day_length"]) * config["day_length"] + event["start"] for event in config["schedule"]]
+
+def set_config(new_config):
+    global config
     if not validate_config(new_config):
         raise ValueError()
     config = new_config
@@ -75,7 +80,7 @@ def set_config(new_config):
     with open("config.json", "w") as file:
         json.dump(config, file)
 
-    next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
+    update_next_start_time()
 
 def handler(method, path, args, body):
     global run_pump_until, run_pump_for, config, wdt
@@ -223,9 +228,14 @@ def write_log(filename, text):
 
 def validate_config(config):
     try:
+        if not isinstance(config["schedule"], list):
+            return None
+        for event in config["schedule"]:
+            event["start"] = int(event["start"])
+            event["duration"] = int(event["duration"])
+            event["subtract"] = 0 if "subtract" not in event else int(event["subtract"])
+            event["max"] = 10*event["duration"] if "max" not in event else int(event["max"])
         config["day_length"] = 24 * 3600 if "day_length" not in config else int(config["day_length"])
-        config["start_time_in_day"] = int(config["start_time_in_day"])
-        config["irrigation_duration"] = int(config["irrigation_duration"])
         config["reference_evaporation"] = float(config["reference_evaporation"])
         config["longitude"] = float(config["longitude"])
         config["latitude"] = float(config["latitude"])
@@ -237,8 +247,12 @@ def validate_config(config):
 def default_config():
     return {
         "day_length": 3600*24,
-        "start_time_in_day": 8 * 3600, # 10am CEST
-        "irrigation_duration": 5,
+        "schedule": [{
+                "start": 8 * 3600, # 10am CEST
+                "duration": 5,
+                "subtract": 0,
+                "max": 50
+        }],
         "reference_evaporation": 6,
         "latitude": 49.5529,
         "longitude": 11.0191559,
@@ -284,16 +298,23 @@ def run():
 
             wdt.feed()
 
-        if time.time() >= next_start_time:
-            next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
-            try:
-                curr_factor = factor()
-                run_pump_for = int(config["irrigation_duration"] * curr_factor / 100)
-            except:
-                curr_factor = "FAIL"
-                run_pump_for = 5
-            run_pump_until = time.time() + run_pump_for
-            write_log("water", "%d,%d,%s,AUTO" % (time.time(), run_pump_for, curr_factor))
+        for (starttime, event) in zip(next_start_time, config["schedule"]):
+            if time.time() >= starttime:
+                update_next_start_time()
+                try:
+                    curr_factor = factor()
+                    curr_factor_readable = curr_factor
+                except:
+                    curr_factor = 100
+                    curr_factor_readable = "FAIL"
+
+                run_pump_for = int(event["duration"] * curr_factor / 100 - event["subtract"])
+                run_pump_for = max(run_pump_for, 0)
+                run_pump_for = min(run_pump_for, event["max"])
+
+                if run_pump_for > 0:
+                    run_pump_until = time.time() + run_pump_for
+                    write_log("water", "%d,%d,%s,AUTO" % (time.time(), run_pump_for, curr_factor_readable))
 
 gc.enable()
 
@@ -331,7 +352,7 @@ while True:
 
 led_pin.off()
 
-next_start_time = intceil((time.time() + 1 - config["start_time_in_day"]), config["day_length"]) * config["day_length"] + config["start_time_in_day"]
+update_next_start_time()
 
 http_server = HttpServer(handler)
 run()
