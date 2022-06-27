@@ -120,6 +120,14 @@ def handler(method, path, args, body, conn):
                 for line in f:
                     conn.sendall(line)
             return (None, None, None)
+        elif path == "/" or path == "/index.html":
+            conn.send('HTTP/1.1 200 OK\n')
+            conn.send('Content-Type: text/plain\n')
+            conn.send('Connection: close\n\n')
+            with open("index.html", "r") as f:
+                for line in f:
+                    conn.sendall(line)
+            return (None, None, None)
         elif path == '/main.py':
             conn.send('HTTP/1.1 200 OK\n')
             conn.send('Content-Type: text/plain\n')

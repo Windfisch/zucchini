@@ -32,7 +32,7 @@ water_url = prefix + "/water";
 ntp_url = prefix + "/ntp";
 status_url = prefix + "/status.json";
 
-setInterval(function() {
+function updateStatus() {
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.onreadystatechange = function() { 
 		if (xmlHttp.readyState == 4) {
@@ -42,11 +42,15 @@ setInterval(function() {
 			else {
 				console.log("Failed to get update");
 			}
+
+			setTimeout(updateStatus, 1000);
 		}
 	}
 	xmlHttp.open("GET", status_url, true); // true for asynchronous 
 	xmlHttp.send(null);
-}, 1000);
+}
+
+updateStatus()
 
 function enablePump(event) {
 	var duration = document.getElementById("seconds").value;
