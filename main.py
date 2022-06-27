@@ -27,6 +27,7 @@ run_pump_until = 0
 run_pump_for = 0
 http_server = None
 next_start_time = []
+last_ntp_sync = 0
 
 wdt = None
 
@@ -86,7 +87,7 @@ def set_config(new_config):
     update_next_start_time()
 
 def handler(method, path, args, body, conn):
-    global run_pump_until, run_pump_for, config, wdt
+    global run_pump_until, run_pump_for, config, wdt, last_ntp_sync
     if method == 'GET':
         if path == '/status.json':
             return ("200 OK", "text/json", json.dumps({
@@ -94,7 +95,9 @@ def handler(method, path, args, body, conn):
                 "GC mem free" : gc.mem_free(),
                 "time": time.gmtime(),
                 "next_start_time": [time.gmtime(t) for t in next_start_time],
+                "next_start_in": [t - time.time() for t in next_start_time],
                 "ntp_server": ntptime.host,
+                "last_ntp_sync": last_ntp_sync,
                 "watchdog_running": wdt is not None
             }))
         elif path == '/log.csv':
@@ -137,6 +140,7 @@ def handler(method, path, args, body, conn):
         if path == '/ntp':
             old_time = time.time()
             ntptime.settime()
+            last_ntp_sync = time.time()
             return("200 OK", "text/json", json.dumps({"time": time.gmtime(), "difference": time.time() - old_time}))
         if path == '/water':
             try:
@@ -283,7 +287,7 @@ def intceil(a,b):
     return (a+b-1)//b
 
 def run():
-    global run_pump_until, run_pump_for, next_start_time, relais_pin, wdt, led_pin, http_server
+    global run_pump_until, run_pump_for, next_start_time, relais_pin, wdt, led_pin, http_server, last_ntp_sync
     performance_until = 0
     NTP_RESYNC_INTERVAL = 3600
     next_ntp_sync = time.time() + NTP_RESYNC_INTERVAL
@@ -313,6 +317,7 @@ def run():
         if time.time() > next_ntp_sync:
             try:
                 ntptime.settime()
+                last_ntp_sync = time.time()
             except:
                 pass
             next_ntp_sync = time.time() + NTP_RESYNC_INTERVAL
@@ -368,6 +373,7 @@ toggle = True
 while True:
     try:
         ntptime.settime()
+        last_ntp_sync = time.time()
         break
     except:
         print("Setting time from NTP failed, retrying")
