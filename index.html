@@ -1,0 +1,132 @@
+<h1>Zucchini -- A cost-effective&#8482; smart home irrigation solution.</h1>
+
+<pre id="status">Status</pre>
+
+<form action="#" onsubmit="enablePump(event); return false">
+	<label>Enable water pump for </label>
+	<input id="seconds" name="seconds" value="5"/>
+	<label>seconds</label>
+	<br/>
+	<input type="submit" id="submit_pump" value="Enable pump!">
+</form>
+
+<form action="#" onsubmit="forceNtp(event); return false">
+	<input type="submit" id="submit_ntp" value="Force NTP re-sync.">
+</form>
+
+<form action="#" onsubmit="submitConfig(event); return false">
+	<label>Configuration</label>
+	<br/>
+	<textarea id="config" name="config" cols="60" rows="30"></textarea>
+	<br/>
+	<input type="submit" id="submit_config" value="Update config">
+</form>
+
+<a href="/main.py">Download the source code</a>.
+
+<script>
+
+prefix = "http://zucchini"
+config_url = prefix + "/config.json";
+water_url = prefix + "/water";
+ntp_url = prefix + "/ntp";
+status_url = prefix + "/status.json";
+
+setInterval(function() {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() { 
+		if (xmlHttp.readyState == 4) {
+			if (xmlHttp.status == 200) {
+				document.getElementById("status").innerHTML = JSON.stringify(JSON.parse(xmlHttp.responseText), null, 2);
+			}
+			else {
+				console.log("Failed to get update");
+			}
+		}
+	}
+	xmlHttp.open("GET", status_url, true); // true for asynchronous 
+	xmlHttp.send(null);
+}, 1000);
+
+function enablePump(event) {
+	var duration = document.getElementById("seconds").value;
+	document.getElementById("submit_pump").value = "Sending...";
+
+	if (duration <= 120) {
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.onreadystatechange = function() { 
+			if (xmlHttp.readyState == 4) {
+				if (xmlHttp.status == 200) {
+					console.log("Success");
+					document.getElementById("submit_pump").value = "Enable pump!";
+				}
+				else {
+					console.log("Fail");
+					document.getElementById("submit_pump").value = "Failed";
+				}
+			}
+		}
+		xmlHttp.open("POST", water_url + "?seconds=" + duration, true); // true for asynchronous 
+		xmlHttp.send(null);
+	}
+	else {
+		document.getElementById("submit_pump").value = "Not gonna do that";
+	}
+}
+
+function forceNtp(event) {
+	document.getElementById("submit_ntp").value = "Sending...";
+
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() { 
+		if (xmlHttp.readyState == 4) {
+			if (xmlHttp.status == 200) {
+				console.log("Success");
+				document.getElementById("submit_ntp").value = "Force NTP re-sync";
+			}
+			else {
+				console.log("Fail");
+				document.getElementById("submit_pump").value = "Failed";
+			}
+		}
+	}
+	xmlHttp.open("POST", ntp_url, true); // true for asynchronous 
+	xmlHttp.send(null);
+}
+
+function submitConfig(event) {
+	console.log("submitting");
+	document.getElementById("submit_config").value = "Updating...";
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() { 
+		if (xmlHttp.readyState == 4) {
+			if (xmlHttp.status == 200) {
+				console.log("Success");
+				document.getElementById("submit_config").value = "Success";
+			}
+			else {
+				console.log("Fail");
+				document.getElementById("submit_config").value = "Failed";
+			}
+		}
+	}
+	xmlHttp.open("PUT", config_url, true); // true for asynchronous 
+	xmlHttp.send(document.getElementById("config").value);
+}
+
+function httpGetAsync(theUrl, callback)
+{
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() { 
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+			callback(xmlHttp.responseText);
+	}
+	xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+	xmlHttp.send(null);
+}
+
+httpGetAsync(config_url, function(config) {
+	document.getElementById("config").value = JSON.stringify(JSON.parse(config), null, 2);
+});
+
+</script>
