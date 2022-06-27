@@ -104,7 +104,8 @@ def handler(method, path, args, body, conn):
                 "ntp_server": ntptime.host,
                 "last_ntp_sync": iso8601time(last_ntp_sync),
                 "no_ntp_sync_since": time.time() - last_ntp_sync,
-                "watchdog_running": wdt is not None
+                "watchdog_running": wdt is not None,
+                "uptime": int(time.ticks_ms() / 1000)
             }))
         elif path == '/log.csv':
             conn.send('HTTP/1.1 200 OK\n')
