@@ -36,15 +36,18 @@ wifi_ssid = 'YOUR WIFI SSID'
 wifi_key = 'YOUR WIFI KEY'
 ```
 
-Use [Webrepl](http://micropython.org/webrepl) to upload the `main.py` and `wifi_config.py` files.
+Use [Webrepl](http://micropython.org/webrepl) to upload the `main.py`, `index.html` and `wifi_config.py`
+files.
 
-Upon rebooting, the device should connect to your WiFi and expose the following HTTP endpoints:
+Upon rebooting, the device should connect to your WiFi and you should be able to point your browser
+to <tt>http://device's ip address</tt>. Additionally, it exposes the following HTTP endpoints:
 
 - `GET /status.json` gives you information about the current state of the system.
 - `GET /log.csv` returns a log of past activations.
 - `GET /config.json` reads the current config as JSON.
 - `GET /factor` retrieves the current irrigation scaling factor for debugging.
 - `GET /main.py` delivers the code running on the micro controller, for AGPL compliance.
+- `GET /` or `GET /index.html` delivers the control website.
 - `PUT /config.json` sets a new config. See below for the configuration format.
 - `POST /ntp` forces the system to re-fetch its time via NTP. Note that this is done on startup
   anyway and should not be neccessary.
@@ -105,7 +108,8 @@ the same number as `subtract` value on the second, e.g.:
 
 > AGPL, are you serious?!
 
-Dead serious. You can retrieve the source code via HTTP using the `/main.py` endpoint.
+Dead serious. You can retrieve the source code via HTTP using the `/main.py` and `/index.html`
+endpoints.
 
 ---
 

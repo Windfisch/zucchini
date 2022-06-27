@@ -98,7 +98,7 @@ def handler(method, path, args, body, conn):
             return ("200 OK", "text/json", json.dumps({
                 "GC enabled" : gc.isenabled(),
                 "GC mem free" : gc.mem_free(),
-                "time": iso8601time(),
+                "time": iso8601time(time.time()),
                 "next_start_time": [iso8601time(t) for t in next_start_time],
                 "next_start_in": [t - time.time() for t in next_start_time],
                 "ntp_server": ntptime.host,
@@ -122,7 +122,7 @@ def handler(method, path, args, body, conn):
             return (None, None, None)
         elif path == "/" or path == "/index.html":
             conn.send('HTTP/1.1 200 OK\n')
-            conn.send('Content-Type: text/plain\n')
+            conn.send('Content-Type: text/html\n')
             conn.send('Connection: close\n\n')
             with open("index.html", "r") as f:
                 for line in f:
@@ -155,7 +155,7 @@ def handler(method, path, args, body, conn):
             old_time = time.time()
             ntptime.settime()
             last_ntp_sync = time.time()
-            return("200 OK", "text/json", json.dumps({"time": iso8601time(), "difference": time.time() - old_time}))
+            return("200 OK", "text/json", json.dumps({"time": iso8601time(time.time()), "difference": time.time() - old_time}))
         if path == '/water':
             try:
                 seconds = int(args['seconds'])
