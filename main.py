@@ -39,6 +39,11 @@ led_pin = machine.Pin(2)
 led_pin.init(led_pin.OUT)
 led_pin.off()
 
+def iso8601time(t):
+    if t is None:
+        t = time.time()
+    return "%04d-%02d-%02dT%02d:%02d:%02dZ" % time.gmtime(t)[:6]
+
 def http_get(url):
     import socket
     _, _, host, path = url.split('/', 3)
@@ -93,11 +98,12 @@ def handler(method, path, args, body, conn):
             return ("200 OK", "text/json", json.dumps({
                 "GC enabled" : gc.isenabled(),
                 "GC mem free" : gc.mem_free(),
-                "time": time.gmtime(),
-                "next_start_time": [time.gmtime(t) for t in next_start_time],
+                "time": iso8601time(),
+                "next_start_time": [iso8601time(t) for t in next_start_time],
                 "next_start_in": [t - time.time() for t in next_start_time],
                 "ntp_server": ntptime.host,
-                "last_ntp_sync": last_ntp_sync,
+                "last_ntp_sync": iso8601time(last_ntp_sync),
+                "no_ntp_sync_since": time.time() - last_ntp_sync,
                 "watchdog_running": wdt is not None
             }))
         elif path == '/log.csv':
@@ -141,7 +147,7 @@ def handler(method, path, args, body, conn):
             old_time = time.time()
             ntptime.settime()
             last_ntp_sync = time.time()
-            return("200 OK", "text/json", json.dumps({"time": time.gmtime(), "difference": time.time() - old_time}))
+            return("200 OK", "text/json", json.dumps({"time": iso8601time(), "difference": time.time() - old_time}))
         if path == '/water':
             try:
                 seconds = int(args['seconds'])
