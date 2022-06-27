@@ -284,6 +284,8 @@ def intceil(a,b):
 def run():
     global run_pump_until, run_pump_for, next_start_time, relais_pin, wdt, led_pin, http_server
     performance_until = 0
+    NTP_RESYNC_INTERVAL = 3600
+    next_ntp_sync = time.time() + NTP_RESYNC_INTERVAL
 
     wdt_start = time.time() + 60
 
@@ -303,6 +305,16 @@ def run():
                 print("Leaving performance mode")
                 performance_until = 0
             machine.lightsleep(500)
+
+        if next_ntp_sync > time.time() + NTP_RESYNC_INTERVAL:
+            next_ntp_sync = time.time() + NTP_RESYNC_INTERVAL
+
+        if time.time() > next_ntp_sync:
+            try:
+                ntptime.settime()
+            except:
+                pass
+            next_ntp_sync = time.time() + NTP_RESYNC_INTERVAL
 
 
         if time.time() + run_pump_for < run_pump_until:
