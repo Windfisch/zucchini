@@ -92,8 +92,8 @@ def handler(method, path, args, body, conn):
             return ("200 OK", "text/json", json.dumps({
                 "GC enabled" : gc.isenabled(),
                 "GC mem free" : gc.mem_free(),
-                "time": time.time(),
-                "next_start_time": next_start_time,
+                "time": time.gmtime(),
+                "next_start_time": [time.gmtime(t) for t in next_start_time],
                 "ntp_server": ntptime.host,
                 "watchdog_running": wdt is not None
             }))
@@ -135,8 +135,9 @@ def handler(method, path, args, body, conn):
                 return("400 Bad Request", "text/html", "<h1>Bad Request</h1>Invalid config")
     elif method == 'POST':
         if path == '/ntp':
+            old_time = time.time()
             ntptime.settime()
-            return("200 OK", "text/json", json.dumps({"time": time.time()}))
+            return("200 OK", "text/json", json.dumps({"time": time.gmtime(), "difference": time.time() - old_time}))
         if path == '/water':
             try:
                 seconds = int(args['seconds'])
