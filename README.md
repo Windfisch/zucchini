@@ -72,6 +72,7 @@ to <tt>http://device's ip address</tt>. Additionally, it exposes the following H
 
       "max": 999,               // Optional: Maxium irrigation duration for this event, wo which the
                                 // duration is clamped. Default: 10*duration
+    }
   ],
 
 
@@ -113,7 +114,7 @@ endpoints.
 
 ---
 
-This is Zucchini, cost-effective™ smart home irrigation solution. Copyright (C)
+This is Zucchini, a cost-effective™ smart home irrigation solution. Copyright (C)
 2022 Florian Jung
 
 This program is free software: you can redistribute it and/or modify it under
